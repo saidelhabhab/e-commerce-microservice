@@ -1,0 +1,227 @@
+==> ✅ 1. Simple Product (ديالك ✔️)
+{
+  "name": "Mouse Logitech",
+  "barcode": "MOUSE-001",
+  "price": 150,
+  "quantity": 20,
+  "inStock": true,
+  "brand": "Logitech",
+  "category": "ACCESSORIES",
+  "taxClass": "TVA_20",
+  "keywords": ["mouse", "logitech", "gaming"],
+  "isFeatured": true,
+  "isNew": true
+}
+
+
+==> 🔥 2. PHONE ب Variants (color + storage)
+{
+  "name": "iPhone 15",
+  "barcode": "IPHONE15-001",
+  "brand": "Apple",
+  "category": "PHONE",
+  "taxClass": "TVA_20",
+  "variants": [
+    {
+      "color": "Black",
+      "storage": "128GB",
+      "price": 12000,
+      "quantity": 5
+    },
+    {
+      "color": "Blue",
+      "storage": "256GB",
+      "price": 14000,
+      "quantity": 3
+    }
+  ]
+}
+
+===> 💻 3. PC (RAM + STORAGE)
+{
+  "name": "MacBook Pro",
+  "barcode": "MACBOOK-001",
+  "brand": "Apple",
+  "category": "PC",
+  "taxClass": "TVA_20",
+  "variants": [
+    {
+      "ram": "16GB",
+      "storage": "256GB",
+      "price": 20000,
+      "quantity": 2
+    },
+    {
+      "ram": "16GB",
+      "storage": "512GB",
+      "price": 23000,
+      "quantity": 1
+    }
+  ]
+}
+
+
+==> ⌚ 4. WATCH (colors فقط)
+{
+  "name": "Apple Watch Series 9",
+  "barcode": "WATCH-001",
+  "brand": "Apple",
+  "category": "WATCH",
+  "taxClass": "TVA_20",
+  "variants": [
+    {
+      "color": "Black",
+      "price": 3000,
+      "quantity": 5
+    },
+    {
+      "color": "Silver",
+      "price": 3200,
+      "quantity": 3
+    }
+  ]
+}
+
+==>
+{
+  "name": "Samsung Galaxy S23",
+  "barcode": "SAMSUNG-001",
+  "brand": "Samsung",
+  "category": "PHONE",
+  "taxClass": "TVA_20",
+  "images": [
+    {
+      "imageUrl": "https://example.com/img1.jpg",
+      "main": true
+    },
+    {
+      "imageUrl": "https://example.com/img2.jpg",
+      "main": false
+    }
+  ],
+  "variants": [
+    {
+      "color": "Black",
+      "storage": "128GB",
+      "price": 9000,
+      "quantity": 4
+    }
+  ]
+}
+
+
+
+
+package test.java.com.saidelhabhab.productservice;
+
+
+import com.saidelhabhab.productservice.dto.ProductRequestDTO;
+import com.saidelhabhab.productservice.dto.ProductResponseDTO;
+import com.saidelhabhab.productservice.entity.Product;
+import com.saidelhabhab.productservice.mapper.ProductMapper;
+import com.saidelhabhab.productservice.repository.ProductRepository;
+import com.saidelhabhab.productservice.service.ProductService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ProductServiceTest {
+
+    @InjectMocks
+    private ProductService productService;
+
+    @Mock
+    private ProductRepository repository;
+
+    @Mock
+    private ProductMapper mapper;
+
+    // =========================
+    // CREATE TEST
+    // =========================
+    @Test
+    void shouldCreateProductSuccessfully() {
+
+        ProductRequestDTO dto = new ProductRequestDTO();
+        dto.setName("iPhone");
+        dto.setBarcode("123");
+
+        Product product = new Product();
+        Product savedProduct = new Product();
+
+        ProductResponseDTO responseDTO = new ProductResponseDTO();
+
+        when(repository.existsByBarcode("123")).thenReturn(false);
+        when(mapper.toEntity(dto)).thenReturn(product);
+        when(repository.save(any(Product.class))).thenReturn(savedProduct);
+        when(mapper.toDto(savedProduct)).thenReturn(responseDTO);
+
+        ProductResponseDTO result = productService.create(dto);
+
+        assertNotNull(result);
+        verify(repository, times(1)).save(any(Product.class));
+    }
+
+    // =========================
+    // GET BY ID TEST
+    // =========================
+    @Test
+    void shouldReturnProductById() {
+
+        UUID id = UUID.randomUUID();
+
+        Product product = new Product();
+        ProductResponseDTO dto = new ProductResponseDTO();
+
+        when(repository.findByProductId(id)).thenReturn(Optional.of(product));
+        when(mapper.toDto(product)).thenReturn(dto);
+
+        ProductResponseDTO result = productService.getById(id);
+
+        assertNotNull(result);
+        verify(repository).findByProductId(id);
+    }
+
+    // =========================
+    // DELETE TEST
+    // =========================
+    @Test
+    void shouldDeleteProduct() {
+
+        UUID id = UUID.randomUUID();
+
+        Product product = new Product();
+
+        when(repository.findByProductId(id)).thenReturn(Optional.of(product));
+
+        productService.delete(id);
+
+        verify(repository).delete(product);
+    }
+
+    // =========================
+    // EXCEPTION TEST
+    // =========================
+    @Test
+    void shouldThrowExceptionWhenProductNotFound() {
+
+        UUID id = UUID.randomUUID();
+
+        when(repository.findByProductId(id)).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(
+                RuntimeException.class,
+                () -> productService.getById(id)
+        );
+
+        assertEquals("Product not found", ex.getMessage());
+    }
+}
