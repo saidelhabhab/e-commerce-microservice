@@ -5,27 +5,40 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@FeignClient(name = "inventory-service")
+@FeignClient(name="inventory-service")
 public interface InventoryClient {
 
     @PostMapping("/api/inventory/reserve")
-    String reserve(
+    void reserveStock(
+
             @RequestParam UUID productId,
-            @RequestParam(required = false) Long variantId,
-            @RequestParam int quantity
+
+            @RequestParam(required=false)
+            Long variantId,
+
+            @RequestParam Integer quantity
     );
 
     @PostMapping("/api/inventory/confirm")
-    String confirm(
+    void confirmStock(
+
             @RequestParam UUID productId,
-            @RequestParam(required = false) Long variantId,
-            @RequestParam int quantity
+
+            @RequestParam(required=false)
+            Long variantId,
+
+            @RequestParam Integer quantity
     );
 
     @PostMapping("/api/inventory/release")
-    String release(
+    void releaseStock(
+
             @RequestParam UUID productId,
-            @RequestParam(required = false) Long variantId,
-            @RequestParam int quantity
+
+            @RequestParam(required=false)
+            Long variantId,
+
+            @RequestParam Integer quantity
     );
+
 }

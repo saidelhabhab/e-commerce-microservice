@@ -78,6 +78,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- KAFKA -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+
         <!-- CACHE (optional) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -90,6 +97,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.saidelhabhab</groupId>
+            <artifactId>common-events</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
 
     </dependencies>
 

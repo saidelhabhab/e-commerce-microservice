@@ -24,6 +24,9 @@ spring:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=10m
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
 eureka:
   client:
     service-url:

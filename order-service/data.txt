@@ -1,0 +1,22 @@
+{
+  "customerId": "22222222-2222-2222-2222-222222222222",
+  "items": [
+    {
+      "productId": "a9525b3d-c764-46e8-bf3c-c28db3d9aa69",
+      "variantId": 1,
+      "quantity": 2
+    }
+  ]
+}
+
+{
+  "customerId": "22222222-2222-2222-2222-222222222222",
+  "items": [
+    {
+      "productId": "790a46ab-dfb6-47db-8b73-1d606367b5cd",
+      "variantId": 1,
+      "quantity": 2
+    }
+  ]
+}
+

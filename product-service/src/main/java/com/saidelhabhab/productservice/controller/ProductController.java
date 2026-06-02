@@ -46,14 +46,6 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    // 🔥 DECREASE STOCK
-    @PutMapping("/{productId}/decrease-stock")
-    public void decreaseStock(
-            @PathVariable UUID productId,
-            @RequestParam(required = false) Long variantId,
-            @RequestParam int quantity
-    ) {
-        service.decreaseStock(productId, variantId, quantity);
-    }
+
 
 }

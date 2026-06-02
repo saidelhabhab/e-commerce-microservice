@@ -1,5 +1,6 @@
 package com.saidelhabhab.productservice.service;
 
+import com.saidelhabhab.productservice.client.InventoryClient;
 import com.saidelhabhab.productservice.dto.ProductRequestDTO;
 import com.saidelhabhab.productservice.dto.ProductResponseDTO;
 import com.saidelhabhab.productservice.entity.Product;
@@ -15,19 +16,23 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+@CacheEvict(value = "products", allEntries = true)
+@Transactional
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository repository;
     private final ProductMapper mapper;
+    private final InventoryClient inventoryClient;
 
-    // CREATE
-    @CacheEvict(value = "products", allEntries = true)
+
     @Transactional
     public ProductResponseDTO create(ProductRequestDTO dto) {
 
-        if (dto.getBarcode() != null && repository.existsByBarcode(dto.getBarcode())) {
+        if (dto.getBarcode() != null &&
+                repository.existsByBarcode(dto.getBarcode())) {
+
             throw new RuntimeException("Barcode already exists");
         }
 
@@ -35,34 +40,64 @@ public class ProductService {
 
         product.setProductId(UUID.randomUUID());
 
-        // ✅ slug unique
         product.setSlug(
-                dto.getName().toLowerCase().replace(" ", "-") + "-" +
-                        UUID.randomUUID().toString().substring(0,5)
+                dto.getName()
+                        .toLowerCase()
+                        .replace(" ", "-")
+                        + "-"
+                        + UUID.randomUUID()
+                        .toString()
+                        .substring(0, 5)
         );
 
-        // ✅ variants
-        if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
+        if (dto.getVariants() != null &&
+                !dto.getVariants().isEmpty()) {
 
             product.setHasVariants(true);
-            product.setPrice(null); // ✅ مهم
 
-            List<ProductVariant> variants = mapper.toVariantEntityList(dto.getVariants());
+            List<ProductVariant> variants =
+                    mapper.toVariantEntityList(dto.getVariants());
 
             variants.forEach(v -> {
-                v.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8)); // ✅ SKU
+
+                v.setSku(
+                        "SKU-" +
+                                UUID.randomUUID()
+                                        .toString()
+                                        .substring(0, 8)
+                );
+
                 v.setProduct(product);
             });
 
             product.setVariants(variants);
 
         } else {
+
             product.setHasVariants(false);
         }
 
-        return mapper.toDto(repository.save(product));
-    }
+        Product saved = repository.save(product);
 
+        // ==========================
+        // CREATE INVENTORY ONLY
+        // ==========================
+
+        if (!saved.isHasVariants()) {
+
+            inventoryClient.createInventory(saved.getProductId(), null);
+
+        } else {
+
+            saved.getVariants().forEach(v ->
+
+                    inventoryClient.createInventory(saved.getProductId(), v.getId())
+
+            );
+        }
+
+        return mapper.toDto(saved);
+    }
 
     // GET ALL
     @Transactional(readOnly = true)
@@ -82,56 +117,76 @@ public class ProductService {
     }
 
     // UPDATE
-    @CacheEvict(value = "product", key = "#productId")
     @Transactional
+    @CacheEvict(value = "product", key = "#productId")
     public ProductResponseDTO update(UUID productId, ProductRequestDTO dto) {
 
         Product product = repository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        mapper.update(dto, product);
+        // =========================
+        // SAVE OLD VALUES (IMPORTANT)
+        // =========================
+        String oldName = product.getName();
+        String oldBarcode = product.getBarcode();
 
-        // clear old variants
-        if (product.getVariants() != null) {
-            product.getVariants().clear();
-        }
-
-        if (!product.getName().equals(dto.getName())) {
-            product.setSlug(
-                    dto.getName().toLowerCase().replace(" ", "-") + "-" +
-                            UUID.randomUUID().toString().substring(0,5)
-            );
-        }
-
-        if (dto.getBarcode() != null &&
-                !dto.getBarcode().equals(product.getBarcode()) &&
-                repository.existsByBarcode(dto.getBarcode())) {
+        // =========================
+        // BARCODE VALIDATION (before overwrite)
+        // =========================
+        if (dto.getBarcode() != null
+                && !Objects.equals(oldBarcode, dto.getBarcode())
+                && repository.existsByBarcode(dto.getBarcode())) {
 
             throw new RuntimeException("Barcode already exists");
         }
 
-        // new variants
+        // =========================
+        // MAP BASIC FIELDS
+        // =========================
+        mapper.update(dto, product);
+
+        // =========================
+        // SLUG UPDATE IF NAME CHANGED
+        // =========================
+        if (!Objects.equals(oldName, dto.getName())) {
+
+            product.setSlug(
+                    dto.getName().toLowerCase()
+                            .replace(" ", "-")
+                            + "-"
+                            + UUID.randomUUID().toString().substring(0, 5)
+            );
+        }
+
+        // =========================
+        // VARIANTS HANDLING (SAFE VERSION)
+        // =========================
         if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
 
             product.setHasVariants(true);
 
-            List<ProductVariant> variants = mapper.toVariantEntityList(dto.getVariants());
+            // IMPORTANT: replace only, not destroy blindly logic
+            List<ProductVariant> newVariants =
+                    mapper.toVariantEntityList(dto.getVariants());
 
-            variants.forEach(v -> {
-                v.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8)); // ✅ هنا
+            newVariants.forEach(v -> {
+                v.setSku("SKU-" + UUID.randomUUID().toString().substring(0, 8));
                 v.setProduct(product);
             });
 
             product.setPrice(null);
-
-
-            product.setVariants(variants);
+            product.setVariants(newVariants);
 
         } else {
             product.setHasVariants(false);
+
+            // optional: keep old variants OR clear if business says simple product
+            product.getVariants().clear();
         }
 
-        return mapper.toDto(repository.save(product));
+        Product saved = repository.save(product);
+
+        return mapper.toDto(saved);
     }
 
     // DELETE
@@ -146,57 +201,5 @@ public class ProductService {
     }
 
 
-    // =========================
-    // 🔥 DECREASE STOCK
-    // =========================
-    @Transactional
-    public void decreaseStock(UUID productId, Long variantId, int quantity) {
 
-        // ✅ VALIDATION
-        if (quantity <= 0) {
-            throw new RuntimeException("Quantity must be greater than 0");
-        }
-
-        Product product = repository.findByProductId(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-
-        // =========================
-        // 🟢 NO VARIANT
-        // =========================
-        if (variantId == null) {
-
-            Integer stock = product.getQuantity();
-
-            if (stock == null || stock < quantity) {
-                throw new RuntimeException("Not enough stock for product");
-            }
-
-            product.setQuantity(stock - quantity);
-        }
-
-        // =========================
-        // 🟡 WITH VARIANT
-        // =========================
-        else {
-
-            if (product.getVariants() == null || product.getVariants().isEmpty()) {
-                throw new RuntimeException("Product has no variants");
-            }
-
-            ProductVariant variant = product.getVariants().stream()
-                    .filter(v -> Objects.equals(v.getId(), variantId))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Variant not found"));
-
-            Integer stock = variant.getQuantity();
-
-            if (stock == null || stock < quantity) {
-                throw new RuntimeException("Not enough stock for variant");
-            }
-
-            variant.setQuantity(stock - quantity);
-        }
-
-        repository.save(product);
-    }
 }

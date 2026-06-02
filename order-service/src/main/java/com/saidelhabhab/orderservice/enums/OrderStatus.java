@@ -2,10 +2,12 @@ package com.saidelhabhab.orderservice.enums;
 
 
 public enum OrderStatus {
-    PENDING,
-    PAID,
+    CREATED,
+    RESERVED,
     CONFIRMED,
+    PAID,
     SHIPPED,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+    FAILED
 }

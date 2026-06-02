@@ -31,12 +31,12 @@
     <modules>
        <module>discovery-server</module>
        <module>api-gateway</module>
-
        <module>product-service</module>
        <module>order-service</module>
-     <module>inventory-service</module>
-       <!--  <module>auth-service</module>
-       <module>notification-service</module> -->
+      <module>inventory-service</module>
+      <module>notification-service</module>
+      <module>common-events</module>
+        <!--  <module>auth-service</module> -->
    </modules>
 
    <!-- ✅ dependency management -->

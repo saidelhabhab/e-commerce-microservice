@@ -1,0 +1,18 @@
+package com.saidelhabhab.commonevents;
+
+public enum EventType {
+
+    ORDER_CREATED,
+    ORDER_RESERVED,
+    ORDER_PAYMENT_FAILED,
+    ORDER_PAID,
+    ORDER_SHIPPED,
+    ORDER_DELIVERED,
+    ORDER_CANCELLED,
+
+    INVENTORY_RESERVED,
+    INVENTORY_RELEASED,
+
+    NOTIFICATION_SENT,
+    NOTIFICATION_FAILED
+}
